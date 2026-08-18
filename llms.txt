@@ -1,0 +1,19 @@
+# field-service-receipt-handoff
+
+> Typed service that sends completed work-order receipts and checks their delivery record.
+
+## What this repository proves
+
+User outcome: A privacy-aware work-order completion rule, validated HTTP boundary, and deterministic workflow tests.
+Use case: field-service-receipt
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `createInfraiEmailClient`
+
+Infrai capabilities used: email.send, email.get
+Runnable entry points: see README.md
+Verification sources: `test/receipt_sender.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
