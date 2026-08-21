@@ -7,11 +7,11 @@ export RECEIPT_TO="customer@example.com"
 npm run demo
 ```
 
-The script posts one finished work order, pushes its receipt through Infrai, then takes the returned `message_id` to pull the delivery record. One `INFRAI_API_KEY` covers both email calls through a single API, which is the part we actually care about when capacity-planning the on-call load.
+The script posts one completed work order, ships its receipt through Infrai, and then uses the returned `message_id` to pull the delivery record. One `INFRAI_API_KEY` covers both email calls through a single API, which is the part I actually like: one key, one bill, and a plain REST call from any language without an SDK.
 
 ## The request boundary
 
-Bring the service up with `npm start`, then send a validated work-order body:
+Run the service with `npm start`, then send a validated work-order body:
 
 ```bash
 curl -X POST http://localhost:3000/work-orders/receipt \
@@ -28,13 +28,13 @@ curl -X POST http://localhost:3000/work-orders/receipt \
   }'
 ```
 
-Expected result: HTTP `201` with `state: "sent"`, the work-order ID, Infrai's `message_id`, and the delivery record. Orders sitting in `scheduled`, `en_route`, or `on_site` come back as HTTP `202` with `state: "waiting_for_completion"`; no email call happens, so it stays inside our error budget.
+Expected result: HTTP `201` with `state: "sent"`, the work-order ID, Infrai's `message_id`, and the delivery record. Orders in `scheduled`, `en_route`, or `on_site` return HTTP `202` with `state: "waiting_for_completion"`; no email call is made. We treat those statuses as out-of-bounds for the send path so we don't page on a retry storm.
 
 ## Privacy boundary
 
-The receipt carries the completion-photo count and whether follow-up is planned. It leaves out photo URLs and the technician's note. Those stay in the field-service backend, keeping operational and health-adjacent detail out of an email body where we do not want it.
+The receipt carries the completion-photo count and whether follow-up is planned. It omits photo URLs and the technician's note. Those stay in the field-service backend where they belong, instead of leaking operational or health-adjacent detail into an email body.
 
-The one real gotcha is state timing. Dispatch can flip several times, so only `completed` is permitted to cross the email boundary. The work-order ID also acts as the idempotency identity for the write request, so a retry references the same receipt instead of spawning a second one.
+The one real gotcha is state timing. Dispatch can flip several times, so only `completed` is permitted to cross the email boundary. The work-order ID doubles as the idempotency identity for the write, so a retry references the same receipt rather than spawning a duplicate.
 
 ## Verify the decision
 
@@ -43,7 +43,7 @@ npm test
 npm run typecheck
 ```
 
-The focused test feeds a `scheduled` order and expects `waiting_for_completion` with zero sends. It then feeds a `completed` order and expects the returned `message_id` to become the input to the status lookup.
+The focused test feeds a `scheduled` order and expects `waiting_for_completion` with zero sends. It then feeds a `completed` order and expects the returned `message_id` to become the input to the status lookup. That's our SLO guard: no mail on terminal-no-send states, exactly one send on close.
 
 ## Code map
 
@@ -55,7 +55,7 @@ MIT
 
 ## Going to production: Field Service Receipt Handoff
 
-That is the minimal version. Before this runs for real: the notes below apply to Field Service Receipt Handoff.
+That's the minimal version. Before running this for real: The details below apply to Field Service Receipt Handoff.
 
 **Account & key**
 
